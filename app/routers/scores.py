@@ -32,10 +32,10 @@ async def cron_refresh_all(authorization: Optional[str] = Header(None)):
 
 
 @router.get("/api/golfer-search")
-async def golfer_search(q: str = ""):
+async def golfer_search(q: str = "", tournament_id: str = ""):
     if len(q) < 2:
         return JSONResponse([])
-    results = await search_golfer(q)
+    results = await search_golfer(q, espn_tournament_id=tournament_id or None)
     return JSONResponse(results[:10])
 
 

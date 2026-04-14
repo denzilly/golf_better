@@ -22,7 +22,7 @@
         <div class="space-y-3">
           {% for i in range(1, 4) %}
           {% set ex = existing[i-1] if existing|length >= i else None %}
-          <div class="relative" x-data="golferSearch('{{ player.id }}', {{ i }})">
+          <div class="relative" x-data="golferSearch('{{ player.id }}', {{ i }}, '{{ ex.golfer_espn_id if ex else '' }}', {{ ('`' + ex.golfer_name + '`') if ex else '``' }})">
             <label class="block text-xs font-medium text-gray-500 mb-1">Golfer {{ i }}</label>
             <input type="hidden" :name="`player_{{ player.id }}_golfer_{{ i }}_id`" x-model="selectedId" />
             <input type="hidden" :name="`player_{{ player.id }}_golfer_{{ i }}_name`" x-model="selectedName" />
@@ -31,8 +31,7 @@
                 @input.debounce.300ms="search()"
                 @focus="open = true"
                 :placeholder="selectedName || 'Search golfer name...'"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                value="{{ ex.golfer_name if ex else '' }}" />
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               <template x-if="selectedName && !query">
                 <span class="absolute right-3 top-2.5 text-xs text-green-600 font-medium" x-text="selectedName"></span>
               </template>
@@ -47,14 +46,6 @@
                 </div>
               </template>
             </div>
-            <!-- Pre-fill existing -->
-            <script>
-              document.addEventListener('alpine:init', () => {
-                {% if ex %}
-                // Pre-fill handled by init
-                {% endif %}
-              });
-            </script>
           </div>
           {% endfor %}
         </div>
@@ -78,20 +69,16 @@ function picksApp() {
   };
 }
 
-function golferSearch(playerId, golferNum) {
-  // Pre-fill values from server-rendered data
-  const prefilledId = document.querySelector(`input[name="player_${playerId}_golfer_${golferNum}_id_prefill"]`)?.value || '';
-  const prefilledName = document.querySelector(`input[name="player_${playerId}_golfer_${golferNum}_name_prefill"]`)?.value || '';
-
+function golferSearch(playerId, golferNum, prefilledId, prefilledName) {
   return {
     query: '',
     results: [],
     open: false,
-    selectedId: prefilledId,
-    selectedName: prefilledName,
+    selectedId: prefilledId || '',
+    selectedName: prefilledName || '',
     async search() {
       if (this.query.length < 2) { this.results = []; return; }
-      const res = await fetch(`/api/golfer-search?q=${encodeURIComponent(this.query)}`);
+      const res = await fetch(`/api/golfer-search?q=${encodeURIComponent(this.query)}&tournament_id={{ tournament.espn_tournament_id }}`);
       this.results = await res.json();
       this.open = true;
     },
@@ -106,15 +93,4 @@ function golferSearch(playerId, golferNum) {
 }
 </script>
 
-<!-- Pre-fill hidden inputs for existing picks -->
-{% for player in players %}
-{% set existing = existing_by_player.get(player.id, []) %}
-{% for i in range(1, 4) %}
-{% set ex = existing[i-1] if existing|length >= i else None %}
-{% if ex %}
-<input type="hidden" name="player_{{ player.id }}_golfer_{{ i }}_id_prefill" value="{{ ex.golfer_espn_id }}" />
-<input type="hidden" name="player_{{ player.id }}_golfer_{{ i }}_name_prefill" value="{{ ex.golfer_name }}" />
-{% endif %}
-{% endfor %}
-{% endfor %}
 {% endblock %}

@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:site.api.espn.com)"
+      "WebFetch(domain:site.api.espn.com)",
+      "Bash(pip show:*)",
+      "Bash(pip index:*)",
+      "Bash(curl -s -o response.json -w \"%{http_code}\" \"https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event=401353232\")",
+      "Bash(python -c ':*)",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__get_console_message"
     ]
   }
 }

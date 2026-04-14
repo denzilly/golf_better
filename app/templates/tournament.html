@@ -42,10 +42,11 @@
 </div>
 {% else %}
 
-<!-- Player Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Player Cards (stacked) -->
+<div class="space-y-6">
   {% for pd in player_data %}
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+
     <!-- Player header -->
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
       <h2 class="text-lg font-semibold text-gray-800">{{ pd.player.name }}</h2>
@@ -54,16 +55,17 @@
       </div>
     </div>
 
-    <!-- Golfers table -->
-    <div class="divide-y divide-gray-50">
+    <!-- Golfers -->
+    <div class="divide-y divide-gray-100">
       {% for g in pd.golfers %}
-      <div x-data="{ open: false }" class="px-5 py-3">
+      <div x-data="{ open: false }">
+
         <!-- Golfer summary row -->
-        <div @click="open = !open" class="flex items-center justify-between cursor-pointer hover:bg-gray-50 -mx-5 px-5 py-1 rounded transition">
+        <div @click="open = !open" class="flex items-center justify-between cursor-pointer hover:bg-gray-50 px-5 py-3 transition">
           <div class="flex items-center gap-3">
-            <span class="text-sm font-medium text-gray-900 w-36 truncate">{{ g.name }}</span>
+            <span class="text-sm font-medium text-gray-900 w-40 truncate">{{ g.name }}</span>
             {% if g.score %}
-            <span class="text-xs text-gray-500 w-12 text-center">
+            <span class="text-xs text-gray-500 w-10 text-center">
               {% if g.score.position_display %}{{ g.score.position_display }}{% else %}—{% endif %}
             </span>
             <span class="text-xs font-mono w-10 text-center
@@ -76,33 +78,32 @@
                 {% else %}+{{ g.score.total_to_par }}{% endif %}
               {% else %}—{% endif %}
             </span>
-            {% if not g.score.made_cut %}
+            {% if g.score and not g.score.made_cut %}
             <span class="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">MC</span>
             {% endif %}
             {% endif %}
           </div>
-          <div class="flex items-center gap-3 text-right">
+          <div class="flex items-center gap-3">
             {% if g.result %}
-            <!-- Payout breakdown chips -->
             <div class="hidden sm:flex gap-1.5 text-xs">
               {% if g.result.stroke_payout != 0 %}
               <span class="px-1.5 py-0.5 rounded {% if g.result.stroke_payout > 0 %}bg-green-50 text-green-700{% else %}bg-red-50 text-red-700{% endif %}">
-                S: {% if g.result.stroke_payout > 0 %}+{% endif %}{{ "%.1f"|format(g.result.stroke_payout) }}
+                S: {% if g.result.stroke_payout > 0 %}+{% endif %}€{{ "%.2f"|format(g.result.stroke_payout) }}
               </span>
               {% endif %}
               {% if g.result.streak_payout != 0 %}
               <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
-                🔥 +{{ "%.1f"|format(g.result.streak_payout) }}
+                🔥 +€{{ "%.2f"|format(g.result.streak_payout) }}
               </span>
               {% endif %}
               {% if g.result.top10_payout != 0 %}
               <span class="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700">
-                T10: +{{ "%.0f"|format(g.result.top10_payout) }}
+                T10: +€{{ "%.0f"|format(g.result.top10_payout) }}
               </span>
               {% endif %}
               {% if g.result.cut_penalty != 0 %}
               <span class="px-1.5 py-0.5 rounded bg-red-50 text-red-700">
-                Cut: {{ "%.0f"|format(g.result.cut_penalty) }}
+                Cut: €{{ "%.0f"|format(g.result.cut_penalty) }}
               </span>
               {% endif %}
             </div>
@@ -111,65 +112,106 @@
               {% if g.result.total_payout > 0 %}+{% endif %}€{{ "%.2f"|format(g.result.total_payout) }}
             </span>
             {% endif %}
-            <span class="text-gray-300 text-xs ml-1" x-text="open ? '▲' : '▼'"></span>
+            <span class="text-gray-300 text-xs" x-text="open ? '▲' : '▼'"></span>
           </div>
         </div>
 
-        <!-- Hole-by-hole expansion -->
-        <div x-show="open" x-cloak class="mt-3 overflow-x-auto">
-          {% if g.holes %}
-          {% set rounds = g.holes | groupby('round_num') %}
-          {% for round_num, round_holes in rounds %}
-          <div class="mb-2">
-            <div class="text-xs font-medium text-gray-500 mb-1">Round {{ round_num }}</div>
-            <div class="flex gap-1 flex-wrap">
-              {% for hole in round_holes %}
-              <div class="text-center w-9">
-                <div class="text-xs text-gray-400">{{ hole.hole_num }}</div>
-                <div class="text-xs font-mono rounded px-1 py-0.5
-                  {% if hole.score_to_par <= -2 %}bg-yellow-300 text-yellow-900 font-bold
-                  {% elif hole.score_to_par == -1 %}bg-red-100 text-red-700 font-semibold
-                  {% elif hole.score_to_par == 0 %}bg-gray-100 text-gray-600
-                  {% elif hole.score_to_par == 1 %}bg-blue-100 text-blue-700
-                  {% else %}bg-blue-200 text-blue-900{% endif %}">
-                  {{ hole.score }}
-                </div>
-                <div class="text-xs text-gray-400">p{{ hole.par }}</div>
-              </div>
-              {% endfor %}
-            </div>
+        <!-- Scorecard expansion -->
+        <div x-show="open" x-cloak class="px-5 pb-5 pt-1">
+          {% if g.scorecard.hole_nums %}
+          <div class="overflow-x-auto">
+            <table class="text-xs border-collapse" style="min-width: 100%">
+              <!-- Header: hole numbers -->
+              <thead>
+                <tr class="bg-green-800 text-white">
+                  <th class="text-left px-3 py-2 font-semibold rounded-tl-lg sticky left-0 bg-green-800 z-10 w-12">Hole</th>
+                  {% for h in g.scorecard.hole_nums %}
+                  <th class="text-center px-1.5 py-2 font-medium w-8">{{ h }}</th>
+                  {% endfor %}
+                  <th class="text-center px-3 py-2 font-semibold w-14 border-l border-green-700">Total</th>
+                  <th class="text-center px-3 py-2 font-semibold w-18 border-l border-green-700">Stroke</th>
+                  <th class="text-center px-3 py-2 font-semibold w-18 rounded-tr-lg border-l border-green-700">Streak</th>
+                </tr>
+                <!-- Par row -->
+                <tr class="bg-green-700 text-white">
+                  <td class="text-left px-3 py-1.5 font-medium sticky left-0 bg-green-700 z-10">Par</td>
+                  {% for h in g.scorecard.hole_nums %}
+                  <td class="text-center px-1.5 py-1.5 text-green-200">{{ g.scorecard.pars.get(h, '—') }}</td>
+                  {% endfor %}
+                  <td class="text-center px-3 py-1.5 font-medium border-l border-green-600">{{ g.scorecard.par_total }}</td>
+                  <td class="border-l border-green-600"></td>
+                  <td class="border-l border-green-600"></td>
+                </tr>
+              </thead>
+              <!-- Round rows -->
+              <tbody>
+                {% for r in g.scorecard.round_nums %}
+                {% set round_holes = g.scorecard.rounds[r] %}
+                {% set rb = g.round_breakdown | selectattr('round_num', 'eq', r) | first | default(none) %}
+                <tr class="{% if loop.index is odd %}bg-gray-50{% else %}bg-white{% endif %} border-b border-gray-100">
+                  <td class="text-left px-3 py-2 font-bold text-gray-600 sticky left-0 {% if loop.index is odd %}bg-gray-50{% else %}bg-white{% endif %} z-10">R{{ r }}</td>
+                  {% for h in g.scorecard.hole_nums %}
+                  {% set hole = round_holes.get(h) %}
+                  {% if hole %}
+                  <td class="text-center px-0.5 py-1.5">
+                    <span class="inline-flex items-center justify-center w-7 h-7 font-mono
+                      {% if hole.score_to_par <= -2 %}rounded-full border-2 border-yellow-500 text-yellow-800 font-bold bg-yellow-50
+                      {% elif hole.score_to_par == -1 %}rounded-full border border-green-600 text-green-700 font-semibold
+                      {% elif hole.score_to_par == 0 %}text-gray-600
+                      {% elif hole.score_to_par == 1 %}border border-blue-400 text-blue-700
+                      {% else %}border-2 border-blue-600 text-blue-900 font-bold{% endif %}">
+                      {{ hole.score }}
+                    </span>
+                  </td>
+                  {% else %}
+                  <td class="text-center text-gray-300 py-1.5">—</td>
+                  {% endif %}
+                  {% endfor %}
+                  <!-- Total strokes -->
+                  <td class="text-center px-3 py-2 font-bold text-gray-700 border-l border-gray-200">
+                    {% if rb %}{{ rb.total_strokes }}{% else %}—{% endif %}
+                  </td>
+                  <!-- Stroke payout -->
+                  <td class="text-center px-3 py-2 font-medium border-l border-gray-200
+                    {% if rb and rb.stroke_payout > 0 %}text-green-600
+                    {% elif rb and rb.stroke_payout < 0 %}text-red-600
+                    {% else %}text-gray-400{% endif %}">
+                    {% if rb %}{% if rb.stroke_payout > 0 %}+{% endif %}€{{ "%.2f"|format(rb.stroke_payout) }}{% else %}—{% endif %}
+                  </td>
+                  <!-- Streak payout -->
+                  <td class="text-center px-3 py-2 font-medium border-l border-gray-200
+                    {% if rb and rb.streak_payout > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                    {% if rb and rb.streak_payout > 0 %}+€{{ "%.2f"|format(rb.streak_payout) }}{% else %}—{% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
-          {% endfor %}
+
+          <!-- Top-10 bonus and cut penalty below scorecard -->
+          {% if g.result and (g.result.top10_payout != 0 or g.result.cut_penalty != 0) %}
+          <div class="mt-3 flex gap-6 text-sm pl-1">
+            {% if g.result.top10_payout != 0 %}
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500">Top-10 bonus:</span>
+              <span class="font-semibold text-purple-700">+€{{ "%.2f"|format(g.result.top10_payout) }}</span>
+            </div>
+            {% endif %}
+            {% if g.result.cut_penalty != 0 %}
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500">Cut penalty:</span>
+              <span class="font-semibold text-red-600">€{{ "%.2f"|format(g.result.cut_penalty) }}</span>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
           {% else %}
-          <p class="text-xs text-gray-400">No hole-by-hole data yet. Refresh scores to populate.</p>
-          {% endif %}
-
-          <!-- Payout breakdown detail -->
-          {% if g.result %}
-          <div class="mt-3 border-t border-gray-100 pt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
-            <div class="flex justify-between"><span>Stroke to par:</span>
-              <span class="{% if g.result.stroke_payout > 0 %}text-green-600{% elif g.result.stroke_payout < 0 %}text-red-600{% endif %} font-medium">
-                {% if g.result.stroke_payout > 0 %}+{% endif %}€{{ "%.2f"|format(g.result.stroke_payout) }}
-              </span>
-            </div>
-            <div class="flex justify-between"><span>Streak bonus:</span>
-              <span class="{% if g.result.streak_payout > 0 %}text-green-600{% endif %} font-medium">
-                +€{{ "%.2f"|format(g.result.streak_payout) }}
-              </span>
-            </div>
-            <div class="flex justify-between"><span>Top-10 bonus:</span>
-              <span class="{% if g.result.top10_payout > 0 %}text-green-600{% endif %} font-medium">
-                +€{{ "%.2f"|format(g.result.top10_payout) }}
-              </span>
-            </div>
-            <div class="flex justify-between"><span>Cut penalty:</span>
-              <span class="{% if g.result.cut_penalty < 0 %}text-red-600{% endif %} font-medium">
-                €{{ "%.2f"|format(g.result.cut_penalty) }}
-              </span>
-            </div>
-          </div>
+          <p class="text-xs text-gray-400 py-3">No scorecard data yet. Refresh scores to populate.</p>
           {% endif %}
         </div>
+
       </div>
       {% endfor %}
     </div>

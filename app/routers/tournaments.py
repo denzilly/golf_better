@@ -5,6 +5,7 @@ from typing import Annotated
 
 from app.database import get_db
 from app.services import espn
+from app.services.scoring import scoring_by_round
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -111,12 +112,32 @@ async def tournament_detail(request: Request, tournament_id: str):
         golfers = []
         for pick in player_picks:
             gid = pick["golfer_espn_id"]
+            holes = hole_scores.get(gid, [])
+            stake = float(t["stake_euros"])
+            round_breakdown = scoring_by_round(holes, stake)
+
+            # Build scorecard: pars by hole, and hole data indexed by [round][hole]
+            pars: dict[int, int] = {}
+            rounds_map: dict[int, dict[int, dict]] = {}
+            for hole in holes:
+                h, r = hole["hole_num"], hole["round_num"]
+                pars[h] = hole["par"]
+                rounds_map.setdefault(r, {})[h] = hole
+            hole_nums = sorted(pars.keys())
+
             golfers.append({
                 "espn_id": gid,
                 "name": pick["golfer_name"],
                 "score": golfer_scores.get(gid, {}),
                 "result": results.get(gid, {}),
-                "holes": hole_scores.get(gid, []),
+                "round_breakdown": round_breakdown,
+                "scorecard": {
+                    "hole_nums": hole_nums,
+                    "pars": pars,
+                    "par_total": sum(pars.values()),
+                    "rounds": rounds_map,
+                    "round_nums": sorted(rounds_map.keys()),
+                },
             })
         player_data.append({
             "player": player,

@@ -37,29 +37,30 @@ def _streak_cumulative_bonus(units: int) -> float:
 
 def streak_payout(hole_scores: list[dict], stake: float) -> float:
     """
-    Calculate streak bonus across all rounds (in round+hole order).
+    Calculate streak bonus within each round (streaks reset between rounds).
 
     hole_scores: list of dicts with keys round_num, hole_num, score_to_par
     Returns bonus euros earned from consecutive birdie/eagle streaks.
     """
-    # Sort by round then hole to ensure correct order (including cross-round chains)
     sorted_holes = sorted(hole_scores, key=lambda h: (h["round_num"], h["hole_num"]))
 
-    current_streak = 0  # units accumulated (birdie=1, eagle=2)
+    current_streak = 0
+    current_round = None
     total_bonus_points = 0.0
 
     for hole in sorted_holes:
+        if hole["round_num"] != current_round:
+            current_streak = 0
+            current_round = hole["round_num"]
+
         stp = hole["score_to_par"]
         if stp < 0:
-            # Birdie or better: add |score_to_par| units
             units_gained = abs(stp)
             old_streak = current_streak
             current_streak += units_gained
-            # Incremental bonus: difference in cumulative bonus
             bonus_delta = _streak_cumulative_bonus(current_streak) - _streak_cumulative_bonus(old_streak)
             total_bonus_points += bonus_delta
         else:
-            # Par or worse: reset streak
             current_streak = 0
 
     return round(total_bonus_points * stake, 2)
@@ -94,6 +95,51 @@ def top10_payout(position: int | None, all_positions: list[int]) -> float:
 def cut_penalty(made_cut: bool) -> float:
     """Flat -25 euro penalty for missing the cut. Stake not applied."""
     return -25.0 if not made_cut else 0.0
+
+
+def scoring_by_round(hole_scores: list[dict], stake: float) -> list[dict]:
+    """
+    Returns per-round breakdown: total_strokes, score_to_par, stroke_payout,
+    and streak_payout (streaks reset between rounds).
+    """
+    sorted_holes = sorted(hole_scores, key=lambda h: (h["round_num"], h["hole_num"]))
+
+    current_streak = 0
+    current_round = None
+    round_data: dict[int, dict] = {}
+
+    for hole in sorted_holes:
+        r = hole["round_num"]
+        if r != current_round:
+            current_streak = 0
+            current_round = r
+
+        if r not in round_data:
+            round_data[r] = {"round_num": r, "score_to_par": 0, "total_strokes": 0, "streak_bonus_points": 0.0}
+
+        stp = hole["score_to_par"]
+        round_data[r]["score_to_par"] += stp
+        round_data[r]["total_strokes"] += hole["score"]
+
+        if stp < 0:
+            old_streak = current_streak
+            current_streak += abs(stp)
+            bonus_delta = _streak_cumulative_bonus(current_streak) - _streak_cumulative_bonus(old_streak)
+            round_data[r]["streak_bonus_points"] += bonus_delta
+        else:
+            current_streak = 0
+
+    result = []
+    for r in sorted(round_data):
+        d = round_data[r]
+        result.append({
+            "round_num": r,
+            "score_to_par": d["score_to_par"],
+            "total_strokes": d["total_strokes"],
+            "stroke_payout": round(-d["score_to_par"] * stake, 2),
+            "streak_payout": round(d["streak_bonus_points"] * stake, 2),
+        })
+    return result
 
 
 def calculate_golfer_result(

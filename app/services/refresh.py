@@ -62,9 +62,9 @@ async def refresh_tournament(tournament_id: str) -> dict:
     golfer_data: dict[str, dict] = {}  # golfer_id → parsed data
 
     for comp in all_competitors:
-        athlete_id = comp.get("athlete", {}).get("id", "")
         parsed = espn.parse_competitor(comp, espn_id)
         gs = parsed["golfer_score"]
+        athlete_id = gs["golfer_espn_id"]
 
         # Collect all positions for top-10 tie calculation
         if gs["position"] is not None and gs["made_cut"]:

@@ -49,7 +49,7 @@ def parse_competitor(competitor: dict, espn_tournament_id: str) -> dict:
       - hole_scores: list of dicts for hole_scores table
     """
     athlete = competitor.get("athlete", {})
-    golfer_id = athlete.get("id", "")
+    golfer_id = athlete.get("id", "") or competitor.get("id", "")
     golfer_name = athlete.get("displayName", "")
 
     # Position / status
@@ -85,9 +85,12 @@ def parse_competitor(competitor: dict, espn_tournament_id: str) -> dict:
             hole_num = hole.get("period", 0)
             if not hole_num:
                 continue
-            strokes = hole.get("value", 0)
-            display = hole.get("displayValue", "E")
-            score_to_par = _parse_score_to_par(display)
+            strokes = int(hole.get("value", 0))
+            # Completed tournaments use scoreType.displayValue for to-par ("E", "-1", "+1")
+            # Live/upcoming use displayValue directly
+            score_type = hole.get("scoreType", {})
+            stp_display = score_type.get("displayValue") or hole.get("displayValue", "E")
+            score_to_par = _parse_score_to_par(stp_display)
             par = strokes - score_to_par if strokes else 0
             if strokes and par:
                 hole_scores.append({
@@ -135,13 +138,14 @@ def get_all_competitors(event: dict) -> list[dict]:
     return competitions[0].get("competitors", [])
 
 
-async def search_golfer(name: str) -> list[dict]:
+async def search_golfer(name: str, espn_tournament_id: Optional[str] = None) -> list[dict]:
     """
-    Search for a golfer by name in the current scoreboard.
+    Search for a golfer by name in a specific tournament's scoreboard,
+    or the current live scoreboard if no tournament ID is given.
     Returns a list of matches: [{"id": ..., "name": ...}]
     """
     try:
-        data = await fetch_scoreboard()
+        data = await fetch_scoreboard(espn_tournament_id=espn_tournament_id)
     except Exception:
         return []
 
@@ -152,7 +156,7 @@ async def search_golfer(name: str) -> list[dict]:
     for event in data.get("events", []):
         for comp in get_all_competitors(event):
             athlete = comp.get("athlete", {})
-            athlete_id = athlete.get("id", "")
+            athlete_id = athlete.get("id", "") or comp.get("id", "")
             display_name = athlete.get("displayName", "")
             if athlete_id and athlete_id not in seen and name_lower in display_name.lower():
                 results.append({"id": athlete_id, "name": display_name})
