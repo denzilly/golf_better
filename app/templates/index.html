@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Golf Bets{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-gray-800">Tournaments</h1>
+  <a href="/tournaments/new" class="bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+    + New Tournament
+  </a>
+</div>
+
+{% if not tournaments %}
+<div class="text-center py-16 text-gray-500">
+  <div class="text-5xl mb-4">⛳</div>
+  <p class="text-lg">No tournaments yet.</p>
+  <a href="/tournaments/new" class="mt-4 inline-block text-green-700 hover:underline font-medium">Create your first tournament →</a>
+</div>
+{% else %}
+<div class="space-y-4">
+  {% for t in tournaments %}
+  <a href="/tournaments/{{ t.id }}" class="block bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition p-5">
+    <div class="flex items-start justify-between">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <h2 class="text-lg font-semibold text-gray-900">{{ t.name }}</h2>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium
+            {% if t.status == 'active' %}bg-green-100 text-green-800
+            {% elif t.status == 'complete' %}bg-gray-100 text-gray-600
+            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            {{ t.status | capitalize }}
+          </span>
+        </div>
+        <p class="text-sm text-gray-500">{{ t.start_date }} – {{ t.end_date }} &nbsp;|&nbsp; Stake: €{{ "%.2f"|format(t.stake_euros) }}</p>
+        {% if t.last_refreshed_at %}
+        <p class="text-xs text-gray-400 mt-1">Last updated: {{ t.last_refreshed_at[:16] | replace("T", " ") }} UTC</p>
+        {% endif %}
+      </div>
+      <div class="text-right">
+        {% if players %}
+        <div class="flex gap-6">
+          {% for player in players %}
+          <div>
+            <div class="text-xs text-gray-500 font-medium">{{ player.name }}</div>
+            {% set total = t.player_totals.get(player.id, 0) %}
+            <div class="text-lg font-bold {% if total > 0 %}text-green-600{% elif total < 0 %}text-red-600{% else %}text-gray-400{% endif %}">
+              {% if total > 0 %}+{% endif %}€{{ "%.2f"|format(total) }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Golf Bets{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .positive { color: #16a34a; }
+    .negative { color: #dc2626; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Nav -->
+  <nav class="bg-green-800 text-white shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="text-xl font-bold tracking-tight">⛳ Golf Bets</a>
+      <div class="flex gap-4 text-sm">
+        <a href="/" class="hover:text-green-200 transition">Dashboard</a>
+        <a href="/tournaments/new" class="bg-green-600 hover:bg-green-500 px-3 py-1 rounded transition">+ New Tournament</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Flash / Error -->
+  {% if request.query_params.get('error') %}
+  <div class="max-w-6xl mx-auto px-4 pt-4">
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+      {{ request.query_params.get('error') }}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Main content -->
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+
+</body>
+</html>

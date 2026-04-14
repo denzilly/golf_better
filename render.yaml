@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: golf-betting
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: golf-score-refresh
+    runtime: python
+    schedule: "*/30 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >
+      curl -s -X POST https://golf-betting.onrender.com/internal/cron/refresh-all
+      -H "Authorization: Bearer $CRON_SECRET" || true
+    envVars:
+      - key: CRON_SECRET
+        sync: false
